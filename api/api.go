@@ -15,6 +15,12 @@ func handleURL(logger *logrus.Entry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var ur urlRequest
 
+		if r.Body == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			writeError(w, fmt.Errorf("empty request body"))
+			return
+		}
+
 		if err := json.NewDecoder(r.Body).Decode(&ur); err != nil {
 			logger.WithError(err).Warn("failed to unmarshal request body")
 			w.WriteHeader(http.StatusBadRequest)
@@ -46,6 +52,12 @@ func handleURL(logger *logrus.Entry) http.HandlerFunc {
 	}
 }
 
+func handleHealth() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 func writeSuccess(w http.ResponseWriter, words map[string]int) {
 	r, _ := json.Marshal(&urlResponse{WordCount: words})
 	w.Write(r)
@@ -69,6 +81,7 @@ func New(logger *logrus.Entry) http.Handler {
 	r := mux.NewRouter()
 
 	r.Handle("/url", handleURL(logger)).Methods("POST").Name("solve")
+	r.Handle("/health", handleHealth()).Methods("GET").Name("health")
 
 	return r
 }

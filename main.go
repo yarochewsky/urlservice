@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"syscall"
 	"urlservice/api"
-	"urlservice/health"
 	"urlservice/middleware"
 
 	"github.com/sirupsen/logrus"
@@ -24,7 +23,6 @@ func main() {
 	flag.Parse()
 
 	addr := osLookupEnv("LISTEN_ADDR", ":8081")
-	healthAddr := osLookupEnv("HEALTH_LISTEN_ADDR", ":8082")
 	tlsCertFile := osLookupEnv("TLS_CERT_FILE", "")
 	tlsKeyFile := osLookupEnv("TLS_KEY_FILE", "")
 
@@ -40,12 +38,6 @@ func main() {
 
 	group, ctx := errgroup.WithContext(ctx)
 
-	healthHandler := health.New()
-	healthServer := &http.Server{Addr: healthAddr, Handler: healthHandler}
-
-	group.Go(func() error {
-		return healthServer.ListenAndServe()
-	})
 	group.Go(func() error {
 		var err error
 		ll := log.WithField("addr", addr)
@@ -70,7 +62,6 @@ func main() {
 			log.Info("shutdown received")
 
 			server.Shutdown(context.Background())
-			healthServer.Shutdown(context.Background())
 		case <-ctx.Done():
 			return ctx.Err()
 		}
